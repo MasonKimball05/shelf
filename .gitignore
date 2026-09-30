@@ -1,0 +1,5 @@
+shelf.json
+*.env
+/shelf
+/shelf.exe
+/dist/
