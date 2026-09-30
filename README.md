@@ -73,4 +73,5 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o s
 | POST | `/api/link?id=` | token: returns a signed stream link (plus subtitle links) |
 | POST | `/api/rescan` | token |
 | GET | `/stream/{id}/{name}?exp=&sig=` | signature |
+| GET | `/` | none: says shelf is running, nothing else |
 | GET | `/healthz` | none (for homebase) |

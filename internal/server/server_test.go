@@ -128,3 +128,14 @@ func TestNameSegmentCannotChooseTheFile(t *testing.T) {
 		t.Errorf("got %d %q: the signed ID alone should decide the file", rec.Code, body)
 	}
 }
+
+func TestRootSaysRunningWithoutLeaking(t *testing.T) {
+	h, _, _ := setup(t)
+	rec := do(t, h, "GET", "/", nil)
+	if rec.Code != 200 || !strings.HasPrefix(rec.Body.String(), "shelf is running") {
+		t.Fatalf("GET /: %d %q", rec.Code, rec.Body.String())
+	}
+	if rec := do(t, h, "GET", "/nope", nil); rec.Code != 404 {
+		t.Errorf("GET /nope: got %d, want 404 (only the bare root answers)", rec.Code)
+	}
+}

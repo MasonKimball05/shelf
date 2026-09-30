@@ -39,6 +39,12 @@ func New(lib *library.Library, signer *Signer, token, publicURL string) *Server 
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	// A friendly answer for a browser pointed at the bare address. It's
+	// unauthenticated, so it says nothing about the library itself.
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Write([]byte("shelf is running.\nOpen the Library tab in Media Player to browse and play.\n"))
+	})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
 	mux.Handle("GET /api/roots", s.auth(s.handleRoots))
 	mux.Handle("GET /api/browse", s.auth(s.handleBrowse))
