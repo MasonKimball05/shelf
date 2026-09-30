@@ -19,11 +19,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/MasonKimball05/shelf/internal/library"
+	"github.com/MasonKimball05/shelf/internal/progress"
 	"github.com/MasonKimball05/shelf/internal/server"
+	"github.com/MasonKimball05/shelf/internal/thumbs"
 )
 
 type config struct {
@@ -32,6 +35,11 @@ type config struct {
 	Roots         []library.Root `json:"roots"`
 	LinkTTLHours  int            `json:"link_ttl_hours"`
 	RescanMinutes int            `json:"rescan_minutes"`
+	// DataDir holds the thumbnail cache and saved positions. Default: a "data"
+	// folder next to the config file.
+	DataDir string `json:"data_dir"`
+	// FFmpeg is the path to ffmpeg, for thumbnails. Default: found on PATH.
+	FFmpeg string `json:"ffmpeg"`
 }
 
 func loadConfig(path string) (config, error) {
@@ -48,6 +56,9 @@ func loadConfig(path string) (config, error) {
 	}
 	if c.PublicURL == "" {
 		c.PublicURL = "http://" + c.Listen
+	}
+	if c.DataDir == "" {
+		c.DataDir = filepath.Join(filepath.Dir(path), "data")
 	}
 	return c, nil
 }
@@ -89,9 +100,23 @@ func main() {
 	}()
 
 	signer := server.NewSigner([]byte(secret), time.Duration(cfg.LinkTTLHours)*time.Hour)
+	api := server.New(lib, signer, token, cfg.PublicURL)
+
+	// Both extras are optional: shelf still streams without them.
+	if maker, err := thumbs.New(filepath.Join(cfg.DataDir, "thumbs"), cfg.FFmpeg); err != nil {
+		log.Printf("thumbnails off: %v", err)
+	} else {
+		api.SetThumbnails(maker)
+	}
+	store, err := progress.Open(filepath.Join(cfg.DataDir, "progress.json"))
+	if err != nil {
+		log.Printf("saved positions: %v (starting fresh)", err)
+	}
+	api.SetProgress(store)
+
 	srv := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           server.New(lib, signer, token, cfg.PublicURL).Handler(),
+		Handler:           api.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		// No WriteTimeout: a movie stream legitimately runs for hours.
 		IdleTimeout: 2 * time.Minute,

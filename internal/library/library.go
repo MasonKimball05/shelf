@@ -288,6 +288,18 @@ func (l *Library) Open(id string) (*os.File, File, error) {
 	return fh, f, err
 }
 
+// Path returns a file and where it is on disk, for tools like ffmpeg that need
+// a path rather than an open file. The path comes from the index, never a request.
+func (l *Library) Path(id string) (File, string, bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	f, ok := l.byID[id]
+	if !ok {
+		return File{}, "", false
+	}
+	return *f, f.abs, true
+}
+
 // Stats summarizes the index.
 func (l *Library) Stats() (files int, scanned time.Time) {
 	l.mu.RLock()

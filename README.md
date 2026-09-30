@@ -19,6 +19,12 @@ transcoding, because mpv on the Mac side plays nearly every format.
    easily send auth headers, so the link carries its own proof, valid for 12 hours.
 4. The stream endpoint verifies the signature and serves the file with
    **Range support**, so seeking and resuming work like a local file.
+5. **Thumbnails**: the first time a video is listed, shelf has ffmpeg grab the
+   frame a tenth of the way in and caches it on disk (optional: without ffmpeg,
+   everything else still works).
+6. **Resume on any Mac**: while a library file plays, Media Player saves its
+   position here every 10 seconds (and on pause), so it picks up in the same
+   spot on another Mac. Browse, search and links include the saved position.
 
 ## Security
 
@@ -31,6 +37,11 @@ transcoding, because mpv on the Mac side plays nearly every format.
 - **Tailscale only.** A Windows firewall rule allows the port from `100.64.0.0/10`
   only, like the other apps homebase runs.
 - **Secrets live in the environment**, via homebase's `env_file`, never in the config.
+- **ffmpeg only ever sees paths from the index**, passed as arguments (no shell)
+  with a `file:` prefix so a file name can't be read as another ffmpeg protocol.
+  At most two run at once, each limited to 45 seconds.
+- **Saved positions only accept files in the library** and sane numbers, with a
+  4 KB body limit, so the store can't be filled with junk.
 
 ## Configuration
 
@@ -48,6 +59,11 @@ transcoding, because mpv on the Mac side plays nearly every format.
   "rescan_minutes": 30
 }
 ```
+
+Optional: `"data_dir"` (thumbnail cache and `progress.json`; default: a `data`
+folder next to the config) and `"ffmpeg"` (path to `ffmpeg.exe`; default: found
+on PATH). Install ffmpeg on the desktop with `winget install Gyan.FFmpeg`, then
+restart shelf from homebase; the log says "thumbnails off" when it can't find it.
 
 `shelf.env` (never committed):
 
@@ -72,6 +88,8 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o s
 | GET | `/api/search?q=` | token |
 | POST | `/api/link?id=` | token: returns a signed stream link (plus subtitle links) |
 | POST | `/api/rescan` | token |
+| GET | `/api/thumb?id=` | token: a video's poster frame (JPEG), 404 for audio or without ffmpeg |
+| POST | `/api/progress` | token: `{"id", "position", "duration"}` in seconds |
 | GET | `/stream/{id}/{name}?exp=&sig=` | signature |
 | GET | `/` | none: says shelf is running, nothing else |
 | GET | `/healthz` | none (for homebase) |
