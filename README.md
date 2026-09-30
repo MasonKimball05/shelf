@@ -39,7 +39,7 @@ transcoding, because mpv on the Mac side plays nearly every format.
 ```json
 {
   "listen": "0.0.0.0:8095",
-  "public_url": "http://arkans-pc1:8095",
+  "public_url": "http://my-desktop:8095",
   "roots": [
     { "name": "Movies", "path": "D:\\Media\\Movies" },
     { "name": "Music",  "path": "D:\\Media\\Music" }
